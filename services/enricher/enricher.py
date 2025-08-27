@@ -69,7 +69,7 @@ class Enricher:
         process one Kafka message: add features and publish enriched doc.
         """
         try:
-            doc = eval(message.value().decode("utf-8"))  # replace with json.loads later
+            doc = json.loads(message.value().decode("utf-8"))
             clean_text = doc.get("clean_text", "")
 
             doc["sentiment"] = self.detect_sentiment(clean_text)
