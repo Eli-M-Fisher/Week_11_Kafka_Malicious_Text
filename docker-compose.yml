@@ -27,7 +27,9 @@ services:
       - mongo_data:/data/db
 
   retriever:
-    build: ./services/retriever
+    build:
+      context: .
+      dockerfile: services/retriever/Dockerfile
     depends_on:
       - kafka
       - mongo
@@ -36,7 +38,9 @@ services:
     restart: always
 
   preprocessor:
-    build: ./services/preprocessor
+    build:
+      context: .
+      dockerfile: services/preprocessor/Dockerfile
     depends_on:
       - kafka
     env_file:
@@ -44,7 +48,9 @@ services:
     restart: always
 
   enricher:
-    build: ./services/enricher
+    build:
+      context: .
+      dockerfile: services/enricher/Dockerfile
     depends_on:
       - kafka
     env_file:
@@ -54,7 +60,9 @@ services:
     restart: always
 
   persister:
-    build: ./services/persister
+    build:
+      context: .
+      dockerfile: services/persister/Dockerfile
     depends_on:
       - kafka
       - mongo
@@ -63,7 +71,9 @@ services:
     restart: always
 
   dataretrieval:
-    build: ./services/dataretrieval
+    build:
+      context: .
+      dockerfile: services/dataretrieval/Dockerfile
     depends_on:
       - mongo
     ports:
