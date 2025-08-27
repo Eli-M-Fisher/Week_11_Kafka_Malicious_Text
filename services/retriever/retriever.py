@@ -1,5 +1,6 @@
 import os
 import time
+import json
 from pymongo import MongoClient
 from confluent_kafka import Producer
 
@@ -54,7 +55,7 @@ class Retriever:
                 else "raw_tweets_not_antisemitic"
             )
             try:
-                self.producer.produce(topic, str(doc).encode("utf-8"))
+                self.producer.produce(topic, json.dumps(doc).encode("utf-8"))
                 print(f"Published to {topic}: {doc.get('text')[:50]}")
             except Exception as e:
                 print(f"Failed to publish message: {e}")
