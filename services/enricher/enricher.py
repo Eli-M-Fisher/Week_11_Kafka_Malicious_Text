@@ -1,36 +1,62 @@
 import os
 import re
 import json
+import time
 from textblob import TextBlob
 from confluent_kafka import Consumer, Producer
+
+
+def create_consumer(broker, group_id, topics, retries=10, delay=5):
+    for i in range(retries):
+        try:
+            c = Consumer({
+                "bootstrap.servers": broker,
+                "group.id": group_id,
+                "auto.offset.reset": "earliest"
+            })
+            c.subscribe(topics)
+            print(f"Connected Kafka Consumer (topics={topics})")
+            return c
+        except Exception as e:
+            print(f"Consumer connection failed (attempt {i+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise RuntimeError("Could not connect to Kafka Consumer after retries")
+
+
+def create_producer(broker, retries=10, delay=5):
+    for i in range(retries):
+        try:
+            p = Producer({"bootstrap.servers": broker})
+            p.produce("healthcheck", b"ping")
+            p.flush(1)
+            print("Connected Kafka Producer")
+            return p
+        except Exception as e:
+            print(f"Producer connection failed (attempt {i+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise RuntimeError("Could not connect to Kafka Producer after retries")
+
 
 class Enricher:
     """
     This service consumes preprocessed messages from Kafka,
     adds extra features (sentiment, weapons detection, timestamps),
-
-    and publishes enriched messages to new topics
+    and publishes enriched messages to new topics.
     """
 
     def __init__(self):
         # the kafka setup
         kafka_broker = os.getenv("KAFKA_BROKER", "localhost:9092")
 
-        self.consumer = Consumer({
-            "bootstrap.servers": kafka_broker,
-            "group.id": "enricher-group",
-            "auto.offset.reset": "earliest"
-        })
+        # use retry-enabled helpers
+        self.consumer = create_consumer(
+            kafka_broker,
+            "enricher-group",
+            ["preprocessed_tweets_antisemitic", "preprocessed_tweets_not_antisemitic"]
+        )
+        self.producer = create_producer(kafka_broker)
 
-        self.producer = Producer({"bootstrap.servers": kafka_broker})
-
-        # and subscribe to preprocessor topics
-        self.consumer.subscribe([
-            "preprocessed_tweets_antisemitic",
-            "preprocessed_tweets_not_antisemitic"
-        ])
-
-        # laestly load weapons list
+        # load weapons list
         weapons_file = os.getenv("WEAPONS_FILE", "../../data/weapons.txt")
         try:
             with open(weapons_file, "r") as f:
@@ -59,8 +85,7 @@ class Enricher:
         """
         and detect weapon keywords from the blacklist file.
         """
-        found = [w for w in self.weapons if w in text.lower()]
-        return found
+        return [w for w in self.weapons if w in text.lower()]
 
     def detect_timestamp(self, text: str):
         """
