@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pymongo
+confluent-kafka
+nltk
+textblob
+python-decouple

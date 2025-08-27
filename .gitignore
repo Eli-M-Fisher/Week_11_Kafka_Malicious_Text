@@ -1,0 +1,75 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment variables / secrets
+env/.env
+*.secret
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+
+# Byte-compiled C extensions
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+develop-eggs/
+downloads/
+.installed.cfg
+
+# Unit test / coverage reports
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.pytest_cache/
+nosetests.xml
+.junit.xml
+test-results.xml
+
+# Local data
+data/*.csv
+data/*.json
+data/*.db
+
+# mongo  Kafka local storage (if we will creat outside docker
+mongo_data/
+kafka_data/
+
+# Output artifacts
+*.tar.gz
+*.zip
+*.bak
+*.tmp
+*.orig
+
+# Ignore infra auto-generated files
+infra/*.bak
+infra/*.tmp

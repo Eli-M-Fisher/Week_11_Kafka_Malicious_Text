@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: persister
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: persister
+  template:
+    metadata:
+      labels:
+        app: persister
+    spec:
+      containers:
+        - name: persister
+          image: elif2/persister:latest
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: mongo-secret

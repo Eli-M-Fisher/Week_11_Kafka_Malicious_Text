@@ -1,0 +1,76 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.1
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.1
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  retriever:
+    build: ./services/retriever
+    depends_on:
+      - kafka
+      - mongo
+    env_file:
+      - ./env/.env
+    restart: always
+
+  preprocessor:
+    build: ./services/preprocessor
+    depends_on:
+      - kafka
+    env_file:
+      - ./env/.env
+    restart: always
+
+  enricher:
+    build: ./services/enricher
+    depends_on:
+      - kafka
+    env_file:
+      - ./env/.env
+    volumes:
+      - ./data/weapons.txt:/app/weapons.txt
+    restart: always
+
+  persister:
+    build: ./services/persister
+    depends_on:
+      - kafka
+      - mongo
+    env_file:
+      - ./env/.env
+    restart: always
+
+  dataretrieval:
+    build: ./services/dataretrieval
+    depends_on:
+      - mongo
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./env/.env
+    restart: always
+
+volumes:
+  mongo_data:

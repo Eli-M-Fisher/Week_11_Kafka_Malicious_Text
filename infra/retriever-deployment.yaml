@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retriever
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retriever
+  template:
+    metadata:
+      labels:
+        app: retriever
+    spec:
+      containers:
+        - name: retriever
+          image: elif2/retriever:latest
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: mongo-secret

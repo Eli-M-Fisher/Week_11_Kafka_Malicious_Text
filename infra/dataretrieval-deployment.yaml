@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dataretrieval
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dataretrieval
+  template:
+    metadata:
+      labels:
+        app: dataretrieval
+    spec:
+      containers:
+        - name: dataretrieval
+          image: elif2/dataretrieval:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: mongo-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dataretrieval
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: dataretrieval

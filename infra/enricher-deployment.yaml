@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enricher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enricher
+  template:
+    metadata:
+      labels:
+        app: enricher
+    spec:
+      containers:
+        - name: enricher
+          image: elif2/enricher:latest
+          envFrom:
+            - configMapRef:
+                name: app-config
