@@ -50,7 +50,7 @@ class Persister:
         i convert kafka message to dict and save it
         """
         try:
-            doc = json.loads(message.value().decode("utf-8"))
+            doc = eval(message.value().decode("utf-8"))  # replace with json.loads later
             self.save_to_db(doc)
         except Exception as e:
             print(f"Failed to process message: {e}")
