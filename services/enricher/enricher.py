@@ -96,27 +96,29 @@ class Enricher:
         return match.group(0) if match else ""
 
     def process_message(self, message):
-        """
-        and process one Kafka message: add features and publish enriched doc.
-        """
         try:
             doc = json.loads(message.value().decode("utf-8"))
             clean_text = doc.get("clean_text", "")
 
+            # enrich
             doc["sentiment"] = self.detect_sentiment(clean_text)
             doc["weapons_detected"] = self.detect_weapons(clean_text)
             doc["relevant_timestamp"] = self.detect_timestamp(doc.get("text", ""))
 
+            # decide topic
             topic = (
                 "enriched_preprocessed_tweets_antisemitic"
                 if doc.get("antisemitic") == 1
                 else "enriched_preprocessed_tweets_not_antisemitic"
             )
 
-            self.producer.produce(topic, str(doc).encode("utf-8"))
-            print(f"Published to {topic}: {clean_text[:50]}")
+            # publish as proper JSON
+            self.producer.produce(topic, json.dumps(doc).encode("utf-8"))
+            print(f"Published to {topic}: {clean_text[:50]}", flush=True)
+
         except Exception as e:
-            print(f"Failed to enrich message: {e}")
+            print(f"Failed to enrich message: {e}", flush=True)
+
 
     def run(self):
         """

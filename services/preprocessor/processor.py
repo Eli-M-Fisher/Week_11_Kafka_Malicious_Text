@@ -105,7 +105,7 @@ class Preprocessor:
                 else "preprocessed_tweets_not_antisemitic"
             )
 
-            self.producer.produce(topic, str(doc).encode("utf-8"))
+            self.producer.produce(topic, json.dumps(doc, default=str).encode("utf-8"))
             print(f"Published to {topic}: {clean[:50]}")
         except Exception as e:
             print(f"Failed to process message: {e}")

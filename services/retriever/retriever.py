@@ -23,8 +23,8 @@ def create_producer(broker, retries=10, delay=5):
 
 class Retriever:
     """
-    This class connects to mongodb Atlas, fetches documents,
-    and publishes them into kafka topics based on classification
+    This class connects to MongoDB Atlas, fetches documents,
+    and publishes them into Kafka topics based on classification.
     """
 
     def __init__(self):
@@ -48,23 +48,36 @@ class Retriever:
 
     def fetch_documents(self, limit=100):
         """
-        fetch oldest documents from mongodb based on timestamp
+        Fetch oldest documents from MongoDB based on CreateDate.
+        Map Atlas fields into standard schema.
         """
         if self.last_timestamp:
             cursor = self.collection.find(
-                {"timestamp": {"$gt": self.last_timestamp}}
-            ).sort("timestamp", 1).limit(limit)
+                {"CreateDate": {"$gt": self.last_timestamp}}
+            ).sort("CreateDate", 1).limit(limit)
         else:
-            cursor = self.collection.find().sort("timestamp", 1).limit(limit)
+            cursor = self.collection.find().sort("CreateDate", 1).limit(limit)
 
         docs = list(cursor)
         if docs:
-            self.last_timestamp = docs[-1]["timestamp"]
-        return docs
+            self.last_timestamp = docs[-1]["CreateDate"]
+
+        # Map Atlas fields into our schema
+        mapped_docs = []
+        for d in docs:
+            mapped_docs.append({
+                "id": str(d.get("_id")),
+                "text": d.get("text", ""),
+                "antisemitic": d.get("Antisemitic", 0),
+                "timestamp": d.get("CreateDate"),
+            })
+
+        print(f"Fetched {len(mapped_docs)} documents from Atlas")
+        return mapped_docs
     
     def publish_to_kafka(self, documents):
         """
-        publish documents to kafka based on antisemitic flag
+        Publish documents to Kafka based on antisemitic flag.
         """
         for doc in documents:
             topic = (
@@ -73,7 +86,7 @@ class Retriever:
                 else "raw_tweets_not_antisemitic"
             )
             try:
-                self.producer.produce(topic, json.dumps(doc).encode("utf-8"))
+                self.producer.produce(topic, json.dumps(doc, default=str).encode("utf-8"))
                 print(f"Published to {topic}: {doc.get('text')[:50]}")
             except Exception as e:
                 print(f"Failed to publish message: {e}")
@@ -82,7 +95,7 @@ class Retriever:
 
     def run(self):
         """
-        run the retriever loop (fetch every 60 seconds)
+        Run the retriever loop (fetch every 60 seconds).
         """
         while True:
             try:
