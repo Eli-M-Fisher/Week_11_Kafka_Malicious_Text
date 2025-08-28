@@ -41,7 +41,8 @@ class Enricher:
     """
     This service consumes preprocessed messages from Kafka,
     adds extra features (sentiment, weapons detection, timestamps),
-    and publishes enriched messages to new topics.
+    and publishes enriched messages to new topics
+
     """
 
     def __init__(self):
@@ -56,14 +57,9 @@ class Enricher:
         )
         self.producer = create_producer(kafka_broker)
 
-        # load weapons list
-        weapons_file = os.getenv("WEAPONS_FILE", "../../data/weapons.txt")
-        try:
-            with open(weapons_file, "r") as f:
-                self.weapons = [w.strip().lower() for w in f.readlines()]
-        except FileNotFoundError:
-            self.weapons = []
-            print("Weapons file not found, continuing without it.")
+
+        # laestly load weapons set
+        self.weapons = self._load_weapons()
 
         print("Enricher initialized successfully")
 
@@ -83,9 +79,13 @@ class Enricher:
 
     def detect_weapons(self, text: str):
         """
-        and detect weapon keywords from the blacklist file.
+        detect weapon keywords from the blacklist file.
         """
-        return [w for w in self.weapons if w in text.lower()]
+
+        words = {word.strip().lower() for word in text.split()}
+        found = words & self.weapons
+        return list(found)
+
 
     def detect_timestamp(self, text: str):
         """
@@ -96,6 +96,11 @@ class Enricher:
         return match.group(0) if match else ""
 
     def process_message(self, message):
+
+        """
+        process one Kafka message: add features and publish enriched doc.
+        """
+
         try:
             doc = json.loads(message.value().decode("utf-8"))
             clean_text = doc.get("clean_text", "")
@@ -133,4 +138,14 @@ class Enricher:
                 continue
 
             self.process_message(msg)
+
             self.producer.flush()
+    
+    def _load_weapons(self):
+        weapons_file = os.getenv("WEAPONS_FILE", "../../data/weapons.txt")
+        try:
+            with open(weapons_file, "r") as f:
+                return set([w.strip().lower() for w in f.readlines()])
+        except FileNotFoundError:
+            print("Weapons file not found, continuing without it.")
+            return set([])
