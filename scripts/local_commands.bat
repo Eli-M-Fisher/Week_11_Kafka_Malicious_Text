@@ -4,8 +4,9 @@ docker-compose down -v
 REM   2. START BASE STACK (Zookeeper + Kafka + Mongo)
 docker-compose up -d zookeeper kafka mongo
 
-REM and give services time to start
-REM Waiting 15 seconds for Kafka and Mongo to initialize...
+REM i give services time to start
+echo Waiting 15 seconds for Kafka and Mongo to initialize...
+timeout /t 15 > nul
 
 
 REM   3. CREATE KAFKA TOPICS
@@ -19,8 +20,9 @@ docker exec -it malicious-text-system-kafka-1 kafka-topics --create --if-not-exi
 REM   4. START ALL SERVICES (Retriever → Preprocessor → Enricher → Persister → API)
 docker-compose up -d retriever preprocessor enricher persister dataretrieval
 
-REM and give them time to boot
-REM Waiting 20 seconds for services to stabilize...
+REM i give again them time to boot
+echo Waiting 20 seconds for services to stabilize...
+timeout /t 20 > nul
 
 REM   5. CHECK RUNNING SERVICES
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
