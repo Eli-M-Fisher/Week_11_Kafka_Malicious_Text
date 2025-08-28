@@ -1,13 +1,46 @@
 import os
 import re
 import json
+import time
 from confluent_kafka import Consumer, Producer
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
+
+def create_consumer(broker, group_id, topics, retries=10, delay=5):
+    for i in range(retries):
+        try:
+            c = Consumer({
+                "bootstrap.servers": broker,
+                "group.id": group_id,
+                "auto.offset.reset": "earliest"
+            })
+            c.subscribe(topics)
+            print(f"Connected Kafka Consumer (topics={topics})")
+            return c
+        except Exception as e:
+            print(f"Consumer connection failed (attempt {i+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise RuntimeError("Could not connect to Kafka Consumer after retries")
+
+
+def create_producer(broker, retries=10, delay=5):
+    for i in range(retries):
+        try:
+            p = Producer({"bootstrap.servers": broker})
+            p.produce("healthcheck", b"ping")
+            p.flush(1)
+            print("Connected Kafka Producer")
+            return p
+        except Exception as e:
+            print(f"Producer connection failed (attempt {i+1}/{retries}): {e}")
+            time.sleep(delay)
+    raise RuntimeError("Could not connect to Kafka Producer after retries")
+
+
 class Preprocessor:
     """
-    are is service consumes messages from Kafka
+    this service consumes messages from Kafka,
 
     cleans the text, and publishes processed messages to new topics
     """
@@ -16,16 +49,13 @@ class Preprocessor:
         # Kafka setup
         kafka_broker = os.getenv("KAFKA_BROKER", "localhost:9092")
 
-        self.consumer = Consumer({
-            "bootstrap.servers": kafka_broker,
-            "group.id": "preprocessor-group",
-            "auto.offset.reset": "earliest"
-        })
-
-        self.producer = Producer({"bootstrap.servers": kafka_broker})
-
-        # Subscribe to retriever topics
-        self.consumer.subscribe(["raw_tweets_antisemitic", "raw_tweets_not_antisemitic"])
+        # use retry-enabled helpers
+        self.consumer = create_consumer(
+            kafka_broker,
+            "preprocessor-group",
+            ["raw_tweets_antisemitic", "raw_tweets_not_antisemitic"]
+        )
+        self.producer = create_producer(kafka_broker)
 
         # NLP tools
         self.stop_words = set(stopwords.words("english"))
@@ -64,7 +94,7 @@ class Preprocessor:
         try:
             doc = json.loads(message.value().decode("utf-8"))
             clean = self.clean_text(doc.get("text", ""))
-
+            
             # Add clean_text to document
             doc["clean_text"] = clean
 
@@ -75,14 +105,14 @@ class Preprocessor:
                 else "preprocessed_tweets_not_antisemitic"
             )
 
-            self.producer.produce(topic, str(doc).encode("utf-8"))
+            self.producer.produce(topic, json.dumps(doc, default=str).encode("utf-8"))
             print(f"Published to {topic}: {clean[:50]}")
         except Exception as e:
             print(f"Failed to process message: {e}")
 
     def run(self):
         """
-        are we keep consuming from Kafka, process, and re-publish...
+        here we keep consuming from Kafka, process, and re-publish...
         """
         while True:
             msg = self.consumer.poll(1.0)

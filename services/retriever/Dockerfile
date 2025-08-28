@@ -2,11 +2,11 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# first i copy requirements and install
-COPY ../../requirements.txt .
+# copy shared requirements
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# and copy retriever service files
-COPY . .
+# copy only this service's code
+COPY services/retriever/ .
 
 CMD ["python", "main.py"]
